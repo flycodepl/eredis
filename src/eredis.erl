@@ -17,7 +17,7 @@
          start_link/5, start_link/6, stop/1, q/2, q/3, qp/2, qp/3, q_noreply/2]).
 
 %% Exported for testing
--export([create_multibulk/1]).
+-export([create_multibulk/1, test/0]).
 
 %% Type of gen_server process id
 -type client() :: pid() |
@@ -77,7 +77,12 @@ stop(Client) ->
 %% data which will be converted to binaries. The returned values will
 %% always be binaries.
 q(Client, Command) ->
-    call(Client, Command, ?TIMEOUT).
+    FinalCmd = case Command of
+                   ["SET", Key, Value] ->
+                       ["SET", Key, encode(Value)];
+                   _ -> Command
+               end,
+    call(Client, FinalCmd, ?TIMEOUT).
 
 q(Client, Command, Timeout) ->
     call(Client, Command, Timeout).
@@ -121,6 +126,17 @@ cast(Client, Command) ->
     Request = {request, create_multibulk(Command)},
     gen_server:cast(Client, Request).
 
+-spec encode(Value::any()) -> list().
+encode(Value) when is_atom(Value) ->
+    io_lib:format("a/~s", [Value]);
+encode(Value) when is_binary(Value) ->
+    io_lib:format("b/~s", [Value]);
+encode(Value) when is_list(Value) ->
+    io_lib:format("l/~s", [Value]);
+encode(Value) when is_integer(Value) ->
+    Value.
+
+
 -spec create_multibulk(Args::iolist()) -> Command::iolist().
 %% @doc: Creates a multibulk command with all the correct size headers
 create_multibulk(Args) ->
@@ -142,3 +158,18 @@ to_binary(X) when is_binary(X)  -> X;
 to_binary(X) when is_integer(X) -> list_to_binary(integer_to_list(X));
 to_binary(X) when is_float(X)   -> throw({cannot_store_floats, X});
 to_binary(X)                    -> term_to_binary(X).
+
+test() ->
+    ListContent = "bar",
+    AtomContent = bar,
+    BinContent = <<"bar">>,
+    IntContent = 1234,
+    {ok, Pid} = start_link(),
+    {ok, <<"OK">>} = q(Pid, ["SET", "foo", ListContent]),
+    {ok, ListContent} = q(Pid, ["GET", "foo"]),
+    {ok, <<"OK">>} = q(Pid, ["SET", "loo", AtomContent]),
+    {ok, AtomContent} = q(Pid, ["GET", "loo"]),
+    {ok, <<"OK">>} = q(Pid, ["SET", "moo", BinContent]),
+    {ok, BinContent} = q(Pid, ["GET", "loo"]),
+    {ok, <<"OK">>} = q(Pid, ["SET", "zoo", IntContent]),
+    {ok, IntContent} = q(Pid, ["GET", "zoo"]).

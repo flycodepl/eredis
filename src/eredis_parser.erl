@@ -255,11 +255,25 @@ get_newline_pos(B) ->
         nomatch -> undefined
     end.
 
+decode(Value) when is_binary(Value), <<"OK">> =/= Value ->
+    io:fwrite("Decoding value...~n", []),
+    Subject = binary_to_list(Value),
+    case string:substr(Subject, 1, 2) of
+        "a/" -> list_to_atom(string:substr(Subject, 3));
+        "b/" -> list_to_binary(string:substr(Subject, 3));
+        "l/" -> string:substr(Subject, 3);
+        _ -> try list_to_integer(Subject)
+             catch _:_ ->
+                     Value
+             end
+    end;
+decode(Value) ->
+    Value.
 
 %% @doc: Helper for handling the result of parsing. Will update the
 %% parser state with the continuation of given name if necessary.
 return_result({ok, Value, <<>>}, _State, _StateName) ->
-    {ok, Value, init()};
+    {ok, decode(Value), init()};
 return_result({ok, Value, Rest}, _State, _StateName) ->
     {ok, Value, Rest, init()};
 return_result({continue, ContinuationData}, State, StateName) ->
