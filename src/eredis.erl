@@ -12,6 +12,9 @@
 %% Default timeout for calls to the client gen_server
 %% Specified in http://www.erlang.org/doc/man/gen_server.html#call-3
 -define(TIMEOUT, 5000).
+-define(PREFIXATOM, "a/").
+-define(PREFIXBIN, "b/").
+-define(PREFIXLIST, "l/").
 
 -export([start_link/0, start_link/1, start_link/2, start_link/3, start_link/4,
          start_link/5, start_link/6, stop/1, q/2, q/3, qp/2, qp/3, q_noreply/2]).
@@ -128,11 +131,11 @@ cast(Client, Command) ->
 
 -spec encode(Value::any()) -> list().
 encode(Value) when is_atom(Value) ->
-    io_lib:format("a/~s", [Value]);
+    io_lib:format("~s~s", [?PREFIXATOM, Value]);
 encode(Value) when is_binary(Value) ->
-    io_lib:format("b/~s", [Value]);
+    io_lib:format("~s~s", [?PREFIXBIN, Value]);
 encode(Value) when is_list(Value) ->
-    io_lib:format("l/~s", [Value]);
+    io_lib:format("~s~s", [?PREFIXLIST, Value]);
 encode(Value) when is_integer(Value) ->
     Value.
 
@@ -170,6 +173,7 @@ test() ->
     {ok, <<"OK">>} = q(Pid, ["SET", "loo", AtomContent]),
     {ok, AtomContent} = q(Pid, ["GET", "loo"]),
     {ok, <<"OK">>} = q(Pid, ["SET", "moo", BinContent]),
-    {ok, BinContent} = q(Pid, ["GET", "loo"]),
+    {ok, BinContent} = q(Pid, ["GET", "moo"]),
     {ok, <<"OK">>} = q(Pid, ["SET", "zoo", IntContent]),
-    {ok, IntContent} = q(Pid, ["GET", "zoo"]).
+    {ok, IntContent} = q(Pid, ["GET", "zoo"]),
+    {ok, "test passed"}.

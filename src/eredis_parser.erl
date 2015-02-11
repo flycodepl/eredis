@@ -25,6 +25,10 @@
 -include_lib("eredis.hrl").
 -include_lib("eunit/include/eunit.hrl").
 
+-define(PREFIXATOM, "a/").
+-define(PREFIXBIN, "b/").
+-define(PREFIXLIST, "l/").
+
 -export([init/0, parse/2]).
 
 %% Exported for testing
@@ -255,20 +259,12 @@ get_newline_pos(B) ->
         nomatch -> undefined
     end.
 
-decode(Value) when is_binary(Value), <<"OK">> =/= Value ->
-    io:fwrite("Decoding value...~n", []),
-    Subject = binary_to_list(Value),
-    case string:substr(Subject, 1, 2) of
-        "a/" -> list_to_atom(string:substr(Subject, 3));
-        "b/" -> list_to_binary(string:substr(Subject, 3));
-        "l/" -> string:substr(Subject, 3);
-        _ -> try list_to_integer(Subject)
-             catch _:_ ->
-                     Value
-             end
-    end;
-decode(Value) ->
-    Value.
+decode(<<?PREFIXATOM, Data/binary>>) -> list_to_atom(binary_to_list(Data));
+decode(<<?PREFIXBIN, Data/binary>>) -> Data;
+decode(<<?PREFIXLIST, Data/binary>>) -> binary_to_list(Data);
+decode(<<Data/binary>>) -> try list_to_integer(binary_to_list(Data))
+                           catch _:_ -> Data
+                           end.
 
 %% @doc: Helper for handling the result of parsing. Will update the
 %% parser state with the continuation of given name if necessary.
