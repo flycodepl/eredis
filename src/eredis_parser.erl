@@ -28,6 +28,8 @@
 -define(PREFIXATOM, "a/").
 -define(PREFIXBIN, "b/").
 -define(PREFIXLIST, "l/").
+-define(PREFIXTUPLE, "t/").
+-define(PREFIXMAP, "m/").
 
 -export([init/0, parse/2]).
 
@@ -262,6 +264,8 @@ get_newline_pos(B) ->
 decode(<<?PREFIXATOM, Data/binary>>) -> list_to_atom(binary_to_list(Data));
 decode(<<?PREFIXBIN, Data/binary>>) -> Data;
 decode(<<?PREFIXLIST, Data/binary>>) -> binary_to_list(Data);
+decode(<<?PREFIXTUPLE, Data/binary>>) -> binary_to_term(Data);
+decode(<<?PREFIXMAP, Data/binary>>) -> binary_to_term(Data);
 decode(<<Data/binary>>) -> try list_to_integer(binary_to_list(Data))
                            catch _:_ -> Data
                            end.

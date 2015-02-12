@@ -15,6 +15,8 @@
 -define(PREFIXATOM, "a/").
 -define(PREFIXBIN, "b/").
 -define(PREFIXLIST, "l/").
+-define(PREFIXTUPLE, "t/").
+-define(PREFIXMAP, "m/").
 
 -export([start_link/0, start_link/1, start_link/2, start_link/3, start_link/4,
          start_link/5, start_link/6, stop/1, q/2, q/3, qp/2, qp/3, q_noreply/2]).
@@ -137,7 +139,11 @@ encode(Value) when is_binary(Value) ->
 encode(Value) when is_list(Value) ->
     io_lib:format("~s~s", [?PREFIXLIST, Value]);
 encode(Value) when is_integer(Value) ->
-    Value.
+    Value;
+encode(Value) when is_tuple(Value) ->
+    io_lib:format("~s~s", [?PREFIXTUPLE, term_to_binary(Value)]);
+encode(Value) when is_map(Value) ->
+    io_lib:format("~s~s", [?PREFIXMAP, term_to_binary(Value)]).
 
 
 -spec create_multibulk(Args::iolist()) -> Command::iolist().
@@ -167,6 +173,8 @@ test() ->
     AtomContent = bar,
     BinContent = <<"bar">>,
     IntContent = 1234,
+    TupleContent = {aaa, bbb, ccc},
+    MapContent = #{foo => bar, "baz" => "ban"},
     {ok, Pid} = start_link(),
     {ok, <<"OK">>} = q(Pid, ["SET", "foo", ListContent]),
     {ok, ListContent} = q(Pid, ["GET", "foo"]),
@@ -176,4 +184,9 @@ test() ->
     {ok, BinContent} = q(Pid, ["GET", "moo"]),
     {ok, <<"OK">>} = q(Pid, ["SET", "zoo", IntContent]),
     {ok, IntContent} = q(Pid, ["GET", "zoo"]),
+    {ok, <<"OK">>} = q(Pid, ["SET", "tuple", TupleContent]),
+    {ok, TupleContent} = q(Pid, ["GET", "tuple"]),
+    {ok, <<"OK">>} = q(Pid, ["SET", "map", MapContent]),
+    {ok, MapContent} = q(Pid, ["GET", "map"]),
+    
     {ok, "test passed"}.
